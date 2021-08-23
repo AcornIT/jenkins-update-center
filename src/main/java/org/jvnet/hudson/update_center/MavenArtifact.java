@@ -144,6 +144,7 @@ public class MavenArtifact {
         o.put("url", getURL().toExternalForm());
         o.put("buildDate", getTimestampAsString());
         o.put("sha1",getDigest());
+        o.put("sha256", d.sha256);
 
         return o;
     }
