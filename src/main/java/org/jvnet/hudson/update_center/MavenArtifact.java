@@ -121,9 +121,27 @@ public class MavenArtifact {
     /**
      * Computes the SHA1 signature of the file.
      */
-    public String getDigest() throws IOException {
+    public String getDigestSHA1() throws IOException {
         try {
             MessageDigest sig = MessageDigest.getInstance("SHA1");
+            FileInputStream fin = new FileInputStream(resolve());
+            byte[] buf = new byte[2048];
+            int len;
+            while ((len=fin.read(buf,0,buf.length))>=0)
+                sig.update(buf,0,len);
+
+            return new String(Base64.encodeBase64(sig.digest()));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException(e);
+        }
+    }
+
+    /**
+     * Computes the SHA256 signature of the file.
+     */
+    public String getDigestSHA256() throws IOException {
+        try {
+            MessageDigest sig = MessageDigest.getInstance("SHA256");
             FileInputStream fin = new FileInputStream(resolve());
             byte[] buf = new byte[2048];
             int len;
@@ -143,8 +161,8 @@ public class MavenArtifact {
 
         o.put("url", getURL().toExternalForm());
         o.put("buildDate", getTimestampAsString());
-        o.put("sha1",getDigest());
-        o.put("sha256", d.sha256);
+        o.put("sha1", getDigestSHA1());
+        o.put("sha256", getDigestSHA256());
 
         return o;
     }
