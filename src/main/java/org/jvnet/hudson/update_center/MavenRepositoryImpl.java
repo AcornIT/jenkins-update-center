@@ -169,7 +169,7 @@ public class MavenRepositoryImpl extends MavenRepository {
 
         URLConnection con = url.openConnection();
         if (url.getUserInfo()!=null) {
-            con.setRequestProperty("Authorization","Basic "+new sun.misc.BASE64Encoder().encode(url.getUserInfo().getBytes()));
+            con.setRequestProperty("Authorization","Basic " + java.util.Base64.getEncoder().encodeToString(url.getUserInfo().getBytes()));
         }
 
         if (!expanded.exists() || !local.exists() || (local.lastModified()!=con.getLastModified() && !offlineIndex)) {
