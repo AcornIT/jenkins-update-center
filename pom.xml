@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ro.acorn.jenkins</groupId>
 	<artifactId>update-center</artifactId>
-	<version>1.21-SNAPSHOT</version>
+	<version>1.21</version>
 	<name>Update center generator for proprietary jenkins plugins</name>
 	<description>Generates update center script</description>
 	<build>
@@ -186,7 +186,8 @@
 	<scm>
 		<connection>scm:git:git://github.com/AcornIT/jenkins-update-center.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/AcornIT/jenkins-update-center.git</developerConnection>
-	</scm>
+	  <tag>update-center-1.21</tag>
+  </scm>
 	<distributionManagement>
 		<repository>
 			<id>acorn</id>
