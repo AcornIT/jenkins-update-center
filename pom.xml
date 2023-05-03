@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ro.acorn.jenkins</groupId>
 	<artifactId>update-center</artifactId>
-	<version>1.21</version>
+	<version>1.22-SNAPSHOT</version>
 	<name>Update center generator for proprietary jenkins plugins</name>
 	<description>Generates update center script</description>
 	<build>
