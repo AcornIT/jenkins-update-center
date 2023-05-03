@@ -1,10 +1,10 @@
 Jenkins update center generator
 ===============================
 
-This project is primarily used to generate the jenkins-ci.org update center laying out the files to and generating
-summary files about the core [aka the wars] and the plugins.
+This project is used to generate a Jenkins update center laying out the files to and generating
+summary files about the proprietary plugins available locally or stored in an Maven repository.
 
-With a few modifications it could easily be used to generate your corporate update center as well.
+This was tweaked from the generator used for jenkins-ci.org.
 
 The generator
 -------------
@@ -83,8 +83,12 @@ Arguments
 	* If not specified, http://repo.jenkins-ci.org/public/ is used.
 	* Default: null
 * -repositoryName
-	* Name of repository. This is a value for n opition of nexus-indexer-cli.
+	* Name of repository. This is a value for n opition of nexus-indexer-cli or the Artifactory repository.
 	* If not specified, "public" is used.
+	* Default: null
+* -repositoryType
+	* Type of Maven repository, Nexus or Artifactory are supported.
+	* If not specified, "Nexus" is used.
 	* Default: null
 * -remoteIndex
 	* Nexus index file in repository.
@@ -161,7 +165,13 @@ Typical Usage
 mvn exec:java -Dexec.args="-id UPDATE-CENTER-ID -h /dev/null -o PATH_TO_WRITE_update-center.json -repository http://YOURSERVER/PATH_TO_REPOSITORY/ -remoteIndex REL_PATH_TO_nexus-maven-repository-index.gz -repositoryName 'REPOSITORY_NAME' -directLink -nowiki -key PATH_TO_KEY_FILE -certificate PATH_TO_CERTIFICATE_FILE -root-certificate PATH_TO_CERTIFICATE_FILE"
 ```
 
-### When you do not use nexus index
+### When you use Artifactory Maven repository
+
+```
+mvn exec:java -Dexec.args="-id UPDATE-CENTER-ID -h /dev/null -o PATH_TO_WRITE_update-center.json -repository http://YOURSERVER/PATH_TO_REPOSITORY/ -repositoryType 'artifactory' -repositoryName 'REPOSITORY_NAME' -directLink -nowiki -key PATH_TO_KEY_FILE -certificate PATH_TO_CERTIFICATE_FILE -root-certificate PATH_TO_CERTIFICATE_FILE"
+```
+
+### When you use local plugins directory
 
 ```
 mvn exec:java -Dexec.args="-id UPDATE-CENTER-ID -h /dev/null -o PATH_TO_WRITE_update-center.json -repository http://YOURSERVER/PATH_TO_REPOSITORY/ -hpiDirectory PATH_TO_LOCAL_REPOSITORY -nowiki -key PATH_TO_KEY_FILE -certificate PATH_TO_CERTIFICATE_FILE -root-certificate PATH_TO_CERTIFICATE_FILE"

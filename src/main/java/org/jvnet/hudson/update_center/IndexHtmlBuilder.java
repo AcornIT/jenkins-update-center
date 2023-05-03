@@ -30,7 +30,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.ByteArrayOutputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
 
 /**
  * @author Kohsuke Kawaguchi

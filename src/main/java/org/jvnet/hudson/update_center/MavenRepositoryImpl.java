@@ -58,7 +58,6 @@ import org.sonatype.nexus.index.context.NexusAnalyzer;
 import org.sonatype.nexus.index.context.NexusIndexWriter;
 import org.sonatype.nexus.index.context.UnsupportedExistingLuceneIndexException;
 import org.sonatype.nexus.index.updater.IndexDataReader;
-import org.sonatype.nexus.index.updater.IndexDataReader.IndexDataReadResult;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -76,239 +75,246 @@ import java.util.TreeMap;
 /**
  * Maven repository and its nexus index.
  *
- * Using Maven embedder 2.0.4 results in problem caused by Plexus incompatibility.
+ * Using Maven embedder 2.0.4 results in problem caused by Plexus
+ * incompatibility.
  *
  * @author Kohsuke Kawaguchi
  */
 public class MavenRepositoryImpl extends MavenRepository {
-    protected NexusIndexer indexer;
-    protected ArtifactFactory af;
-    protected ArtifactResolver ar;
-    protected List<ArtifactRepository> remoteRepositories = new ArrayList<ArtifactRepository>();
-    protected ArtifactRepository local;
-    protected ArtifactRepositoryFactory arf;
-    private PlexusContainer plexus;
-    private boolean offlineIndex;
-    private boolean directLink;
+	protected NexusIndexer indexer;
+	protected ArtifactFactory af;
+	protected ArtifactResolver ar;
+	protected List<ArtifactRepository> remoteRepositories = new ArrayList<ArtifactRepository>();
+	protected ArtifactRepository local;
+	protected ArtifactRepositoryFactory arf;
+	private PlexusContainer plexus;
+	private boolean offlineIndex;
+	private boolean directLink;
 
-    public MavenRepositoryImpl() throws Exception {
-        this(false);
-    }
-    
-    public MavenRepositoryImpl(boolean directLink) throws Exception {
-        this.directLink = directLink;
-        ClassWorld classWorld = new ClassWorld( "plexus.core", MavenRepositoryImpl.class.getClassLoader() );
-        ContainerConfiguration configuration = new DefaultContainerConfiguration().setClassWorld( classWorld );
-        plexus = new DefaultPlexusContainer( configuration );
-        ComponentDescriptor<ArtifactTransformationManager> componentDescriptor = plexus.getComponentDescriptor(ArtifactTransformationManager.class,
-            ArtifactTransformationManager.class.getName(), "default");
-        if (componentDescriptor == null) {
-            throw new IllegalArgumentException("Unable to find maven default ArtifactTransformationManager component. You might get this if you run the program from within the exec:java mojo.");
-        }
-        componentDescriptor.setImplementationClass(DefaultArtifactTransformationManager.class);
+	public MavenRepositoryImpl() throws Exception {
+		this(false);
+	}
 
-        indexer = plexus.lookup( NexusIndexer.class );
+	public MavenRepositoryImpl(boolean directLink) throws Exception {
+		this.directLink = directLink;
+		ClassWorld classWorld = new ClassWorld("plexus.core", MavenRepositoryImpl.class.getClassLoader());
+		ContainerConfiguration configuration = new DefaultContainerConfiguration().setClassWorld(classWorld);
+		plexus = new DefaultPlexusContainer(configuration);
+		ComponentDescriptor<ArtifactTransformationManager> componentDescriptor = plexus.getComponentDescriptor(
+				ArtifactTransformationManager.class, ArtifactTransformationManager.class.getName(), "default");
+		if (componentDescriptor == null) {
+			throw new IllegalArgumentException(
+					"Unable to find maven default ArtifactTransformationManager component. You might get this if you run the program from within the exec:java mojo.");
+		}
+		componentDescriptor.setImplementationClass(DefaultArtifactTransformationManager.class);
 
-        af = plexus.lookup(ArtifactFactory.class);
-        ar = plexus.lookup(ArtifactResolver.class);
-        arf = plexus.lookup(ArtifactRepositoryFactory.class);
+		indexer = plexus.lookup(NexusIndexer.class);
 
-        local = arf.createArtifactRepository("local",
-                new File(new File(System.getProperty("user.home")), ".m2/repository").toURI().toURL().toExternalForm(),
-                new DefaultRepositoryLayout(), POLICY, POLICY);
-    }
+		af = plexus.lookup(ArtifactFactory.class);
+		ar = plexus.lookup(ArtifactResolver.class);
+		arf = plexus.lookup(ArtifactRepositoryFactory.class);
 
-    /**
-     * Set to true to force reusing locally cached index and not download new versions.
-     * Useful for debugging.
-     */
-    public void setOfflineIndex(boolean offline) {
-        this.offlineIndex = offline;
-    }
+		local = arf.createArtifactRepository("local",
+				new File(new File(System.getProperty("user.home")), ".m2/repository").toURI().toURL().toExternalForm(),
+				new DefaultRepositoryLayout(), POLICY, POLICY);
+	}
 
-    /**
-     * Plexus container that's hosting the Maven components.
-     */
-    public PlexusContainer getPlexus() {
-        return plexus;
-    }
+	/**
+	 * Set to true to force reusing locally cached index and not download new
+	 * versions. Useful for debugging.
+	 */
+	public void setOfflineIndex(boolean offline) {
+		this.offlineIndex = offline;
+	}
 
-    /**
-     * @param id
-     *      Repository ID. This ID has to match the ID in the repository index, due to a design bug in Maven.
-     * @param indexDirectory
-     *      Directory that contains exploded index zip file.
-     * @param repository
-     *      URL of the Maven repository. Used to resolve artifacts.
-     */
-    public void addRemoteRepository(String id, File indexDirectory, URL repository) throws IOException, UnsupportedExistingLuceneIndexException {
-        List<IndexCreator> indexCreatorList = new ArrayList<IndexCreator>(NexusIndexer.DEFAULT_INDEX);
-        indexCreatorList.add(new HpiFixupIndexCreator());
-        indexCreatorList.add(new RepositoryIndexCreator(repository));
-        indexer.addIndexingContext(id, id,null, indexDirectory,repository.toString(),null, indexCreatorList);
-        remoteRepositories.add(
-                arf.createArtifactRepository(id, repository.toExternalForm(),
-                        new DefaultRepositoryLayout(), POLICY, POLICY));
-    }
+	/**
+	 * Plexus container that's hosting the Maven components.
+	 */
+	public PlexusContainer getPlexus() {
+		return plexus;
+	}
 
-    public void addRemoteRepository(String id, URL repository) throws IOException, UnsupportedExistingLuceneIndexException {
-        addRemoteRepository(id,new URL(repository,".index/nexus-maven-repository-index.gz"), repository);
-    }
+	/**
+	 * @param id             Repository ID. This ID has to match the ID in the
+	 *                       repository index, due to a design bug in Maven.
+	 * @param indexDirectory Directory that contains exploded index zip file.
+	 * @param repository     URL of the Maven repository. Used to resolve artifacts.
+	 */
+	public void addRemoteRepository(String id, File indexDirectory, URL repository)
+			throws IOException, UnsupportedExistingLuceneIndexException {
+		List<IndexCreator> indexCreatorList = new ArrayList<IndexCreator>(NexusIndexer.DEFAULT_INDEX);
+		indexCreatorList.add(new HpiFixupIndexCreator());
+		indexCreatorList.add(new RepositoryIndexCreator(repository));
+		indexer.addIndexingContext(id, id, null, indexDirectory, repository.toString(), null, indexCreatorList);
+		remoteRepositories.add(arf.createArtifactRepository(id, repository.toExternalForm(),
+				new DefaultRepositoryLayout(), POLICY, POLICY));
+	}
 
-    public void addRemoteRepository(String id, URL remoteIndex, URL repository) throws IOException, UnsupportedExistingLuceneIndexException {
-        addRemoteRepository(id,loadIndex(id,remoteIndex), repository);
-    }
+	public void addRemoteRepository(String id, URL repository)
+			throws IOException, UnsupportedExistingLuceneIndexException {
+		addRemoteRepository(id, new URL(repository, ".index/nexus-maven-repository-index.gz"), repository);
+	}
 
-    /**
-     * Loads a remote repository index (.zip or .gz), convert it to Lucene index and return it.
-     */
-    private File loadIndex(String id, URL url) throws IOException, UnsupportedExistingLuceneIndexException {
-        File dir = new File(new File(System.getProperty("java.io.tmpdir")), "maven-index/" + id);
-        File local = new File(dir,"index"+getExtension(url));
-        File expanded = new File(dir,"expanded");
+	public void addRemoteRepository(String id, URL remoteIndex, URL repository)
+			throws IOException, UnsupportedExistingLuceneIndexException {
+		addRemoteRepository(id, loadIndex(id, remoteIndex), repository);
+	}
 
-        URLConnection con = url.openConnection();
-        if (url.getUserInfo()!=null) {
-            con.setRequestProperty("Authorization","Basic " + java.util.Base64.getEncoder().encodeToString(url.getUserInfo().getBytes()));
-        }
+	/**
+	 * Loads a remote repository index (.zip or .gz), convert it to Lucene index and
+	 * return it.
+	 */
+	private File loadIndex(String id, URL url) throws IOException, UnsupportedExistingLuceneIndexException {
+		File dir = new File(new File(System.getProperty("java.io.tmpdir")), "maven-index/" + id);
+		File local = new File(dir, "index" + getExtension(url));
+		File expanded = new File(dir, "expanded");
 
-        if (!expanded.exists() || !local.exists() || (local.lastModified()!=con.getLastModified() && !offlineIndex)) {
-            System.out.println("Downloading "+url);
-            // if the download fail in the middle, only leave a broken tmp file
-            dir.mkdirs();
-            File tmp = new File(dir,"index_"+getExtension(url));
-            FileOutputStream o = new FileOutputStream(tmp);
-            IOUtils.copy(con.getInputStream(), o);
-            o.close();
+		URLConnection con = url.openConnection();
+		if (url.getUserInfo() != null) {
+			con.setRequestProperty("Authorization",
+					"Basic " + java.util.Base64.getEncoder().encodeToString(url.getUserInfo().getBytes()));
+		}
 
-            if (expanded.exists())
-                FileUtils.deleteDirectory(expanded);
-            expanded.mkdirs();
+		if (!expanded.exists() || !local.exists() || (local.lastModified() != con.getLastModified() && !offlineIndex)) {
+			System.out.println("Downloading " + url);
+			// if the download fail in the middle, only leave a broken tmp file
+			dir.mkdirs();
+			File tmp = new File(dir, "index_" + getExtension(url));
+			FileOutputStream o = new FileOutputStream(tmp);
+			IOUtils.copy(con.getInputStream(), o);
+			o.close();
 
-            if (url.toExternalForm().endsWith(".gz")) {
-                System.out.println("Reconstructing index from "+url);
-                FSDirectory directory = FSDirectory.getDirectory(expanded);
-                NexusIndexWriter w = new NexusIndexWriter(directory, new NexusAnalyzer(), true);
-                FileInputStream in = new FileInputStream(tmp);
-                try {
-                    IndexDataReader dr = new IndexDataReader(in);
-                    IndexDataReadResult result = dr.readIndex(w,
-                            new DefaultIndexingContext(id,id,null,expanded,null,null,NexusIndexer.DEFAULT_INDEX,true));
-                } finally {
-                    IndexUtils.close(w);
-                    IOUtils.closeQuietly(in);
-                    directory.close();
-                }
-            } else
-            if (url.toExternalForm().endsWith(".zip")) {
-                Expand e = new Expand();
-                e.setSrc(tmp);
-                e.setDest(expanded);
-                e.execute();
-            } else {
-                throw new UnsupportedOperationException("Unsupported index format: "+url);
-            }
+			if (expanded.exists())
+				FileUtils.deleteDirectory(expanded);
+			expanded.mkdirs();
 
-            // as a proof that the expansion was properly completed
-            tmp.renameTo(local);
-            local.setLastModified(con.getLastModified());
-        } else {
-            System.out.println("Reusing the locally cached "+url+" at "+local);
-        }
+			if (url.toExternalForm().endsWith(".gz")) {
+				System.out.println("Reconstructing index from " + url);
+				FSDirectory directory = FSDirectory.getDirectory(expanded);
+				NexusIndexWriter w = new NexusIndexWriter(directory, new NexusAnalyzer(), true);
+				try (FileInputStream in = new FileInputStream(tmp)) {
+					IndexDataReader dr = new IndexDataReader(in);
+					dr.readIndex(w, new DefaultIndexingContext(id, id, null, expanded, null, null,
+							NexusIndexer.DEFAULT_INDEX, true));
+				} finally {
+					IndexUtils.close(w);
+					directory.close();
+				}
+			} else if (url.toExternalForm().endsWith(".zip")) {
+				Expand e = new Expand();
+				e.setSrc(tmp);
+				e.setDest(expanded);
+				e.execute();
+			} else {
+				throw new UnsupportedOperationException("Unsupported index format: " + url);
+			}
 
-        return expanded;
-    }
+			// as a proof that the expansion was properly completed
+			tmp.renameTo(local);
+			local.setLastModified(con.getLastModified());
+		} else {
+			System.out.println("Reusing the locally cached " + url + " at " + local);
+		}
 
-    private static String getExtension(URL url) {
-        String s = url.toExternalForm();
-        int idx = s.lastIndexOf('.');
-        if (idx<0)  return "";
-        else        return s.substring(idx);
-    }
+		return expanded;
+	}
 
-    protected File resolve(ArtifactInfo a, String type, String classifier) throws AbstractArtifactResolutionException {
-        Artifact artifact = af.createArtifactWithClassifier(a.groupId, a.artifactId, a.version, type, classifier);
-        ar.resolve(artifact, remoteRepositories, local);
-        return artifact.getFile();
-    }
+	private static String getExtension(URL url) {
+		String s = url.toExternalForm();
+		int idx = s.lastIndexOf('.');
+		if (idx < 0)
+			return "";
+		else
+			return s.substring(idx);
+	}
 
-    public Collection<PluginHistory> listHudsonPlugins() throws PlexusContainerException, ComponentLookupException, IOException, UnsupportedExistingLuceneIndexException, AbstractArtifactResolutionException {
-        BooleanQuery q = new BooleanQuery();
-        q.add(indexer.constructQuery(ArtifactInfo.PACKAGING,"hpi"), Occur.MUST);
+	protected File resolve(ArtifactInfo a, String type, String classifier) throws AbstractArtifactResolutionException {
+		Artifact artifact = af.createArtifactWithClassifier(a.groupId, a.artifactId, a.version, type, classifier);
+		ar.resolve(artifact, remoteRepositories, local);
+		return artifact.getFile();
+	}
 
-        FlatSearchRequest request = new FlatSearchRequest(q);
-        FlatSearchResponse response = indexer.searchFlat(request);
+	public Collection<PluginHistory> listHudsonPlugins() throws PlexusContainerException, ComponentLookupException,
+			IOException, UnsupportedExistingLuceneIndexException, AbstractArtifactResolutionException {
+		BooleanQuery q = new BooleanQuery();
+		q.add(indexer.constructQuery(ArtifactInfo.PACKAGING, "hpi"), Occur.MUST);
 
-        Map<String, PluginHistory> plugins =
-            new TreeMap<String, PluginHistory>(String.CASE_INSENSITIVE_ORDER);
+		FlatSearchRequest request = new FlatSearchRequest(q);
+		FlatSearchResponse response = indexer.searchFlat(request);
 
-        for (ArtifactInfo a : response.getResults()) {
-            if (a.version.contains("SNAPSHOT"))     continue;       // ignore snapshots
-            if (IGNORE.containsKey(a.artifactId) || IGNORE.containsKey(a.artifactId + "-" + a.version))
-                continue;       // artifactIds or particular versions to omit
+		Map<String, PluginHistory> plugins = new TreeMap<String, PluginHistory>(String.CASE_INSENSITIVE_ORDER);
 
-            PluginHistory p = plugins.get(a.artifactId);
-            if (p==null)
-                plugins.put(a.artifactId, p=new PluginHistory(a.artifactId));
-            p.addArtifact(createHpiArtifact(a, p));
-            p.groupId.add(a.groupId);
-        }
-        return plugins.values();
-    }
+		for (ArtifactInfo a : response.getResults()) {
+			if (a.version.contains("SNAPSHOT"))
+				continue; // ignore snapshots
+			if (IGNORE.containsKey(a.artifactId) || IGNORE.containsKey(a.artifactId + "-" + a.version))
+				continue; // artifactIds or particular versions to omit
 
-    public TreeMap<VersionNumber,HudsonWar> getHudsonWar() throws IOException, AbstractArtifactResolutionException {
-        TreeMap<VersionNumber,HudsonWar> r = new TreeMap<VersionNumber, HudsonWar>(VersionNumber.DESCENDING);
-        listWar(r, "org.jenkins-ci.main", null);
-        listWar(r, "org.jvnet.hudson.main", CUT_OFF);
-        return r;
-    }
+			PluginHistory p = plugins.get(a.artifactId);
+			if (p == null)
+				plugins.put(a.artifactId, p = new PluginHistory(a.artifactId));
+			p.addArtifact(createHpiArtifact(a, p));
+			p.groupId.add(a.groupId);
+		}
+		return plugins.values();
+	}
 
-    private void listWar(TreeMap<VersionNumber, HudsonWar> r, String groupId, VersionNumber cap) throws IOException {
-        BooleanQuery q = new BooleanQuery();
-        q.add(indexer.constructQuery(ArtifactInfo.GROUP_ID,groupId), Occur.MUST);
-        q.add(indexer.constructQuery(ArtifactInfo.PACKAGING,"war"), Occur.MUST);
+	public TreeMap<VersionNumber, HudsonWar> getHudsonWar() throws IOException, AbstractArtifactResolutionException {
+		TreeMap<VersionNumber, HudsonWar> r = new TreeMap<VersionNumber, HudsonWar>(VersionNumber.DESCENDING);
+		listWar(r, "org.jenkins-ci.main", null);
+		listWar(r, "org.jvnet.hudson.main", CUT_OFF);
+		return r;
+	}
 
-        FlatSearchRequest request = new FlatSearchRequest(q);
-        FlatSearchResponse response = indexer.searchFlat(request);
+	private void listWar(TreeMap<VersionNumber, HudsonWar> r, String groupId, VersionNumber cap) throws IOException {
+		BooleanQuery q = new BooleanQuery();
+		q.add(indexer.constructQuery(ArtifactInfo.GROUP_ID, groupId), Occur.MUST);
+		q.add(indexer.constructQuery(ArtifactInfo.PACKAGING, "war"), Occur.MUST);
 
-        for (ArtifactInfo a : response.getResults()) {
-            if (a.version.contains("SNAPSHOT"))     continue;       // ignore snapshots
-            if (!a.artifactId.equals("jenkins-war")
-             && !a.artifactId.equals("hudson-war"))  continue;      // somehow using this as a query results in 0 hits.
-            if (a.classifier!=null)  continue;          // just pick up the main war
-            if (cap!=null && new VersionNumber(a.version).compareTo(cap)>0) continue;
+		FlatSearchRequest request = new FlatSearchRequest(q);
+		FlatSearchResponse response = indexer.searchFlat(request);
 
-            VersionNumber v = new VersionNumber(a.version);
-            r.put(v, createHudsonWarArtifact(a));
-        }
-    }
+		for (ArtifactInfo a : response.getResults()) {
+			if (a.version.contains("SNAPSHOT"))
+				continue; // ignore snapshots
+			if (!a.artifactId.equals("jenkins-war") && !a.artifactId.equals("hudson-war"))
+				continue; // somehow using this as a query results in 0 hits.
+			if (a.classifier != null)
+				continue; // just pick up the main war
+			if (cap != null && new VersionNumber(a.version).compareTo(cap) > 0)
+				continue;
 
-/*
-    Hook for subtypes to use customized implementations.
- */
+			VersionNumber v = new VersionNumber(a.version);
+			r.put(v, createHudsonWarArtifact(a));
+		}
+	}
 
-    protected HPI createHpiArtifact(ArtifactInfo a, PluginHistory p) throws AbstractArtifactResolutionException {
-        return directLink?new DirectHPI(this, p, a):new HPI(this,p,a);
-    }
+	/*
+	 * Hook for subtypes to use customized implementations.
+	 */
 
-    protected HudsonWar createHudsonWarArtifact(ArtifactInfo a) {
-        return new HudsonWar(this,a);
-    }
+	protected HPI createHpiArtifact(ArtifactInfo a, PluginHistory p) throws AbstractArtifactResolutionException {
+		return directLink ? new DirectHPI(this, p, a) : new HPI(this, p, a);
+	}
 
-    private static final Properties IGNORE = new Properties();
+	protected HudsonWar createHudsonWarArtifact(ArtifactInfo a) {
+		return new HudsonWar(this, a);
+	}
 
-    static {
-        try {
-            IGNORE.load(Plugin.class.getClassLoader().getResourceAsStream("artifact-ignores.properties"));
-        } catch (IOException e) {
-            throw new Error(e);
-        }
-    }
+	private static final Properties IGNORE = new Properties();
 
-    protected static final ArtifactRepositoryPolicy POLICY = new ArtifactRepositoryPolicy(true, "daily", "warn");
+	static {
+		try {
+			IGNORE.load(Plugin.class.getClassLoader().getResourceAsStream("artifact-ignores.properties"));
+		} catch (IOException e) {
+			throw new Error(e);
+		}
+	}
 
-    /**
-     * Hudson -> Jenkins cut-over version.
-     */
-    public static final VersionNumber CUT_OFF = new VersionNumber("1.395");
+	protected static final ArtifactRepositoryPolicy POLICY = new ArtifactRepositoryPolicy(true, "daily", "warn");
+
+	/**
+	 * Hudson -> Jenkins cut-over version.
+	 */
+	public static final VersionNumber CUT_OFF = new VersionNumber("1.395");
 }
