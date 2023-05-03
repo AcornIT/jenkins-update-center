@@ -249,7 +249,7 @@ public class Plugin {
         return labels.split("\\s+");
     }
 
-    /** @return The plugin name defined in the POM &lt;name>; falls back to the MANIFEST name, then artifact ID. */
+    /** @return The plugin name defined in the POM &lt;name&gt; falls back to the MANIFEST name, then artifact ID. */
     public String getName() throws IOException {
         String title = selectSingleValue(getPom(), "/project/name");
         if (title == null) {
