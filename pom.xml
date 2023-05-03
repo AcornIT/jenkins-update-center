@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ro.acorn.jenkins</groupId>
 	<artifactId>update-center</artifactId>
-	<version>1.22-SNAPSHOT</version>
+	<version>1.21-SNAPSHOT</version>
 	<name>Update center generator for proprietary jenkins plugins</name>
 	<description>Generates update center script</description>
 	<build>
@@ -61,6 +61,13 @@
 				<configuration>
 					<source>1.8</source>
 					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<source>8</source>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -186,8 +193,8 @@
 	<scm>
 		<connection>scm:git:git://github.com/AcornIT/jenkins-update-center.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/AcornIT/jenkins-update-center.git</developerConnection>
-	  <tag>update-center-1.21</tag>
-  </scm>
+		<tag>update-center-1.21</tag>
+	</scm>
 	<distributionManagement>
 		<repository>
 			<id>acorn</id>
