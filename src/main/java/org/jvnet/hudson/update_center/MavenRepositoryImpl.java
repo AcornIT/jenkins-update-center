@@ -314,7 +314,7 @@ public class MavenRepositoryImpl extends MavenRepository {
 	protected static final ArtifactRepositoryPolicy POLICY = new ArtifactRepositoryPolicy(true, "daily", "warn");
 
 	/**
-	 * Hudson -> Jenkins cut-over version.
+	 * Hudson Jenkins cut over version.
 	 */
 	public static final VersionNumber CUT_OFF = new VersionNumber("1.395");
 }
