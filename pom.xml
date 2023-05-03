@@ -185,7 +185,7 @@
 	</repositories>
 	<scm>
 		<connection>scm:git:git://github.com/AcornIT/jenkins-update-center.git</connection>
-		<developerConnection>scm:git:ssh://akera-io@github.com/AcornIT/jenkins-update-center.git</developerConnection>
+		<developerConnection>scm:git:ssh://git@github.com/AcornIT/jenkins-update-center.git</developerConnection>
 	  <tag>update-center-1.21</tag>
   </scm>
 	<distributionManagement>
